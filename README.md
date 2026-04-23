@@ -100,8 +100,9 @@ python main.py --loop --interval 5
 
 **Start the Monitoring API:**
 ```bash
-uvicorn app.api:app --reload
+python -m uvicorn app.api:app --reload
 ```
+> On Windows, use `python -m uvicorn` rather than bare `uvicorn` — the `uvicorn.exe` shim isn't always on PATH after `pip install`.
 - **API Docs**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 - `GET /status` — pipeline health
 - `GET /decisions` — decision history

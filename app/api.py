@@ -130,4 +130,4 @@ def run_all() -> JSONResponse:
 # Run locally:
 #   pip install -r requirements.txt
 #   cp .env.example .env  # then fill in your keys
-#   uvicorn app.api:app --reload
+#   python -m uvicorn app.api:app --reload
