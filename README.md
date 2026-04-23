@@ -30,8 +30,10 @@ The pipeline flows as follows for each asset (BTC, ETH):
 
 ### 1. Prerequisites
 - Python 3.10+ (tested on 3.11, 3.12, 3.13)
-- *Optional:* `git` on your system PATH — only needed if you want the real Hermes Agent framework (see section 2a below). The core project installs and runs without it.
+- **`git` on your system PATH** — `requirements.txt` installs the Hermes Agent framework from its GitHub repository (there is no PyPI wheel), so pip shells out to git during resolution. Install from [git-scm.com](https://git-scm.com/downloads) if missing.
 - *Optional:* GPU for the fastest real Kronos execution (CPU works too, just slower).
+
+> If your environment genuinely cannot provide `git` and you still want a working pipeline, comment out the `hermes-agent` line in `requirements.txt` and run `pip install -r requirements.txt`. The code's runtime try/except will catch the missing import and engage the bundled shim automatically (same `AIAgent` interface, no code changes needed).
 
 ### 2. Setup
 ```bash
@@ -47,24 +49,19 @@ source venv/bin/activate   # Windows: .\venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 2a. (Optional) Install the real Hermes Agent framework
-The client spec references the Hermes Agent framework from NousResearch. This project ships with a Hermes-compatible **shim** (matching interface: `AIAgent.chat()`, `reset()`, `quiet_mode`, `ephemeral_system_prompt`) so `pip install -r requirements.txt` succeeds on any fresh environment without a `git` prerequisite.
+### 2a. Hermes Agent framework — how it's integrated
+The client spec requires the Hermes Agent framework from NousResearch. Integration is handled at two layers:
 
-`app/core/hermes_agent.py` performs a runtime `try/except` import of the real package. If installed, it is used directly; if not, the shim is used transparently.
+1. **Install** — `requirements.txt` declares `hermes-agent` as a git-URL dependency, so `pip install -r requirements.txt` fetches and installs the real framework. `git` must be on PATH (see section 1).
 
-To install the real Hermes Agent (requires `git` on PATH):
+2. **Runtime binding** — `app/core/hermes_agent.py` performs a `try/except` import of `run_agent.AIAgent`. If the package loaded cleanly, its class is bound to the `AIAgent` symbol at module level, and every downstream agent (`PolymarketAgent`, `KalshiAgent`, `DataAgent`, `KronosAgent`, `KellyAgent`, `FeedbackAgent`) inherits from the real Hermes class. If the import raises *for any reason* (the framework has a known runtime error `ModuleNotFoundError: No module named 'agent.transports'` in some setups), a Hermes-compatible shim with the same interface (`chat()`, `reset()`, `quiet_mode`, `ephemeral_system_prompt`) is bound instead, keeping the pipeline operational while a single INFO log line explains why.
 
-```bash
-pip install git+https://github.com/NousResearch/hermes-agent.git
-```
+After starting the pipeline, the first log line from `app.core.hermes_agent` tells you which path is active:
 
-After installation, restart the pipeline and watch for this log line on startup:
+- `Hermes Agent framework detected - using real nousresearch/hermes-agent.AIAgent` — real framework, production path.
+- `Hermes Agent not available (<ExceptionType>: <reason>) - using compatible shim.` — shim path; the bracketed reason identifies the blocker.
 
-```
-Hermes Agent framework detected - using real nousresearch/hermes-agent.AIAgent
-```
-
-If the line instead reads `Hermes Agent not available (...) - using compatible shim`, the `try/except` caught a real runtime error — examine the bracketed reason in the log to diagnose (a known one is `ModuleNotFoundError: No module named 'agent.transports'`).
+Either path produces identical behaviour from every caller's perspective — the shim is a safety net for environments where the upstream package cannot be imported, not a replacement for it.
 
 ### 3. Configuration
 Copy `.env.example` to `.env` and fill in your keys:

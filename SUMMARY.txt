@@ -3,7 +3,7 @@
 ================================================================================
 
   Repository : https://github.com/Lakshya-KR/tendem
-  Archive    : crowdwisdom_v4.zip (~42 KB)
+  Archive    : crowdwisdom_v4.zip (~49 KB)
   Status     : Ready for submission
 
 ================================================================================
@@ -97,19 +97,35 @@
   See detail further down. Newer QA findings (5 and 6) are resolved here too.
 
   --------------------------------------------------------------------------
-  ISSUE 5 - requirements.txt had an un-installable git-only dependency
+  ISSUE 5 - requirements.txt + Hermes integration (updated)
   --------------------------------------------------------------------------
-  Symptom    : pip install -r requirements.txt failed on fresh environments
-               without git on PATH, because hermes-agent is distributed only
-               from github (no PyPI wheel).
+  This item was REVISITED after a follow-up QA pass that asked for the
+  hermes-agent dependency to be present in requirements.txt and bound at
+  import time.
 
-  Resolution : The git-based line was removed from requirements.txt. The
-               file now installs cleanly on any Python 3.10+ environment
-               without requiring git. A comment block in requirements.txt
-               explains this and documents the optional one-line install
-               command for the real Hermes Agent framework. README section
-               2a was added with the full explanation, the install command,
-               and the log line to look for once the real package is live.
+  Final state :
+    - requirements.txt DOES include hermes-agent as a git-URL dependency
+      (hermes-agent @ git+https://github.com/NousResearch/hermes-agent.git).
+      This is what the follow-up QA asked for; a comment block above the
+      line documents the git prerequisite.
+    - README section 1 lists `git` as a required system prerequisite
+      (no longer optional), with a link to git-scm.com.
+    - README section 2a explains the two-layer integration: install via
+      requirements.txt, then runtime try/except auto-binding in
+      app/core/hermes_agent.py.
+    - An escape hatch is documented for environments that genuinely
+      cannot provide git: comment out the one hermes-agent line in
+      requirements.txt and the shim auto-engages at runtime with no
+      code changes required.
+
+  Note on "HermesStyleOrchestrator":
+    The follow-up QA referenced a "custom HermesStyleOrchestrator" that
+    should be demoted. No such class or file exists in this codebase
+    (confirmed by repository grep). The integration pattern has always
+    been: every agent file does `from app.core.hermes_agent import
+    AIAgent` and subclasses it directly. When AIAgent is bound to the
+    real Hermes class at import time, every agent automatically uses
+    the real framework - no orchestrator indirection to remove.
 
   --------------------------------------------------------------------------
   ISSUE 6 - HermesAvailable was hard-coded False (shim always used)
