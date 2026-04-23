@@ -80,8 +80,10 @@ def _run_kronos(asset: str, closes: list[float]) -> dict:
     df["low"] = df[["open", "close"]].min(axis=1)
     df["volume"] = 0.0
 
-    x_timestamp = pd.date_range(end=pd.Timestamp.utcnow(), periods=len(df), freq="5min")
-    y_timestamp = pd.date_range(start=x_timestamp[-1] + pd.Timedelta("5min"), periods=1, freq="5min")
+    # Kronos expects pandas Series (accesses .dt), not raw DatetimeIndex
+    _x_idx = pd.date_range(end=pd.Timestamp.utcnow().tz_localize(None), periods=len(df), freq="5min")
+    x_timestamp = pd.Series(_x_idx)
+    y_timestamp = pd.Series(pd.date_range(start=_x_idx[-1] + pd.Timedelta("5min"), periods=1, freq="5min"))
 
     pred = predictor.predict(
         df=df[["open", "high", "low", "close", "volume"]],

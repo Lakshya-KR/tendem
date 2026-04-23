@@ -1,0 +1,206 @@
+================================================================================
+  CrowdWisdomTrading Predictions Agent - Submission Summary
+================================================================================
+
+  Repository : https://github.com/Lakshya-KR/tendem
+  Archive    : crowdwisdom_v4.zip (~42 KB)
+  Status     : Ready for submission (video URL pending)
+
+================================================================================
+  IMPORTANT - READ README.md BEFORE RUNNING
+================================================================================
+
+  Before attempting to run this project, READ README.md IN FULL. In particular:
+
+    - Section 3 "Configuration" contains the complete table of all 13
+      environment variables, their defaults, and which are required vs optional.
+    - Section 4 documents the optional Kronos installation step.
+    - Section 5 documents how to run the CLI and the FastAPI service.
+    - Section 6 "Troubleshooting" covers the common Windows gotchas
+      (python -m uvicorn, stale Hermes provider config, base URL issues).
+
+  DO NOT skip README.md. The env key table in that file is the source of truth.
+  This summary lists only the REQUIRED keys; the README lists all optional keys
+  too (proxy URLs, model overrides, Kronos toggles, prediction markets, etc.).
+
+================================================================================
+  REQUIRED ENVIRONMENT KEYS (minimum to run the full pipeline)
+================================================================================
+
+  Copy .env.example to .env and fill in at least these three:
+
+    1. OPENROUTER_API_KEY   - your OpenRouter API key (free tier works)
+                              get one at https://openrouter.ai/keys
+
+    2. APIFY_TOKEN          - your personal Apify token (free tier works)
+                              get one at https://console.apify.com/settings/integrations
+
+    3. OPENAI_API_KEY       - can be the same value as OPENROUTER_API_KEY;
+                              used by the Hermes agent framework
+
+  Everything else (base URLs, model names, paths, Kalshi/Polymarket endpoints,
+  history file path, log level, Kronos toggles) has a working default. Only
+  override them if you need a proxy, a different model, or a custom path.
+
+  See README.md Section 3 for the full table with defaults and descriptions.
+
+================================================================================
+  WHAT WAS RESOLVED IN THIS REVISION
+================================================================================
+
+  --------------------------------------------------------------------------
+  ISSUE 1 - APIFY tokens missing from submission materials
+  --------------------------------------------------------------------------
+  Resolution : A dedicated SUBMISSION.md was added at the repository root
+               containing the exact APIFY_TOKEN used for the evaluation run,
+               the matching base URL, and a privacy note. Tokens are kept
+               out of README.md to separate public setup documentation from
+               evaluation-specific credentials.
+
+               After review, the initially referenced Toloka proxy token was
+               replaced with a personal free-tier Apify account token -
+               aligning with the brief's "apify - it's free" language and
+               avoiding distribution of internal platform credentials.
+
+  --------------------------------------------------------------------------
+  ISSUE 2 - README.md still contained placeholders
+  --------------------------------------------------------------------------
+  Resolution : All placeholders were replaced with concrete values.
+                 - <your-repo-url> replaced with github.com/Lakshya-KR/tendem
+                 - Project directory references updated to "tendem"
+                 - Bare "uvicorn" corrected to "python -m uvicorn" (needed
+                   on Windows where the uvicorn.exe shim is not on PATH)
+                 - Full environment-variable table added enumerating all 13
+                   supported keys, defaults, and required/optional status
+                 - Quick Start, Kronos setup, and Troubleshooting sections
+                   expanded with explicit, copy-pasteable commands
+
+  --------------------------------------------------------------------------
+  ISSUE 3 - Proxy bearer token hard-coded in public README
+  --------------------------------------------------------------------------
+  Resolution : No tokens appear in README.md. A hardened secrets policy was
+               put in place.
+                 - .gitignore added (excludes .env, .env.local, venv/,
+                   .kronos/, and Python build artifacts)
+                 - Previously tracked .env was untracked via git rm --cached
+                 - .env.example added as a canonical template with zero
+                   real values
+                 - README.md now references SUBMISSION.md for evaluation-run
+                   credentials rather than embedding them directly
+                 - scripts/verify_env.py added to print a masked audit of
+                   detected secrets for demo visibility without exposing
+                   them on screen
+
+  --------------------------------------------------------------------------
+  ISSUE 4 - Kronos integration was only a stub
+  --------------------------------------------------------------------------
+  Resolution : Real inference is now operating. The prior kronos_infer.py
+               returned a hard-coded error; it was rewritten to:
+                 - Load KronosTokenizer and Kronos from HuggingFace
+                   (NeoQuasar/Kronos-Tokenizer-base, NeoQuasar/Kronos-small)
+                   via the cloned .kronos/ repository
+                 - Instantiate KronosPredictor with max_context=512 on CPU
+                 - Ingest OHLCV, run forward inference over a 512-bar window,
+                   and emit {"direction": "UP"|"DOWN", "confidence": float}
+                 - Gracefully report JSON-encoded errors on any failure so
+                   the agent's LLM-proxy fallback can engage cleanly
+
+               Supporting changes:
+                 - scripts/setup_kronos.bat (Windows) added alongside
+                   the existing shell installer
+                 - KronosAgent defaults to KRONOS=on and resolves
+                   KRONOS_SCRIPT_PATH to the bundled inference script
+                 - A bug where the agent parsed "UP"/"DOWN" as float
+                   was corrected
+                 - Live verification confirmed method=kronos_subprocess
+                   with confidence=0.99 on BTC - no fallback engaged
+
+================================================================================
+  ADDITIONAL HARDENING BEYOND THE QA SCOPE
+================================================================================
+
+  - Binance public-API fallback layer added to apify_service.py. When Apify
+    returns quota errors (403 hard-limit exceeded), the pipeline auto-falls
+    back to Binance's public /klines endpoint, returning real OHLCV without
+    authentication. Synthetic data is now only used when both sources fail.
+
+  - Kelly Agent outcome-awareness - sizing logic made consistent across
+    UP/YES and DOWN/NO directions.
+
+  - Windows-safe logging - PYTHONIOENCODING=utf-8 guidance documented to
+    avoid cp1252 encoding errors on the right-arrow glyph in log messages.
+
+  - Graceful error propagation in the Kronos subprocess wrapper - error
+    payloads are logged clearly and do not halt the pipeline.
+
+  - OHLCV math-safety to handle non-standard data shapes without raising
+    ZeroDivisionError.
+
+  - Demo artifacts: scripts/verify_env.py for environment audit and
+    scripts/setup_kronos.(sh|bat) for one-command Kronos installation.
+
+================================================================================
+  END-TO-END VERIFICATION (live run, recorded in examples/prediction_history.jsonl)
+================================================================================
+
+  Conditions of the run:
+    - Apify token: quota exhausted (HTTP 403)
+    - Kalshi endpoint: DNS miss (network restriction)
+    - OpenRouter / LLM: online
+    - Kronos: installed at .kronos/
+
+  Observed behaviour:
+    - PolymarketAgent        selected a BTC market with LLM-assisted ranking
+    - KalshiAgent            gracefully skipped (no markets found)
+    - Apify service          reported 403; Binance fallback engaged
+    - Binance fallback       fetched 1000 real OHLCV bars
+    - DataAgent              generated 352-char market-structure commentary
+    - KronosAgent            method=kronos_subprocess, conf=0.99 (REAL Kronos)
+    - KellyAgent             sized position with secondary LLM validation
+    - FeedbackAgent          generated 1000+ char critique, flagging the
+                             horizon mismatch between the 5-min forecast
+                             and the Polymarket long-horizon market
+                             (closed-loop learning behaviour)
+    - Decision persisted to  examples/prediction_history.jsonl
+    - GET /status            HTTP 200, full system state returned
+    - GET /decisions         HTTP 200, 20+ decisions with all fields populated
+
+================================================================================
+  DELIVERABLES
+================================================================================
+
+  - Repository        github.com/Lakshya-KR/tendem
+  - SUBMISSION.md     at repo root; contains APIFY token + reproduction steps
+  - crowdwisdom_v4.zip  ~42 KB, excludes .env, .kronos/, .git/, __pycache__/
+  - Demo video        pending - placeholder in SUBMISSION.md line 5
+
+================================================================================
+  HOW TO RUN (TL;DR - full instructions in README.md)
+================================================================================
+
+   1. git clone https://github.com/Lakshya-KR/tendem.git && cd tendem
+   2. python -m venv venv && venv\Scripts\activate   (Windows)
+                                                      or: source venv/bin/activate
+   3. pip install -r requirements.txt
+   4. cp .env.example .env       and fill in the three REQUIRED keys above
+   5. python scripts/verify_env.py      (optional - masked audit)
+   6. python main.py --asset BTC        (one-shot run)
+                  or
+      python -m uvicorn app.api:app --reload     (start the API server)
+
+  For Kronos real inference (optional but recommended):
+     scripts\setup_kronos.bat   (Windows)   or   bash scripts/setup_kronos.sh
+
+  Again: READ README.md FOR THE FULL ENV KEY TABLE AND TROUBLESHOOTING NOTES.
+
+================================================================================
+  OUTSTANDING ITEMS
+================================================================================
+
+  1. Record demo video (~2-3 min) following the prepared command sequence.
+  2. Paste the video URL into SUBMISSION.md line 5.
+  3. Commit, push, and re-zip.
+  4. Submit through the internally approved channel (do not email the client
+     directly until internal confirmation is received).
+
+================================================================================

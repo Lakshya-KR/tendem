@@ -62,6 +62,37 @@ def _run_actor_sync(actor_id: str, run_input: dict, timeout: int = 120) -> list:
         raise RuntimeError(f"Apify actor {actor_id} failed: {exc}") from exc
 
 
+def _binance_public_bars(asset: str, n: int = 1000, timeframe: str = "5m") -> Optional[List[OHLCVBar]]:
+    """
+    Fallback: fetch real OHLCV from Binance public klines API (no auth, no quota).
+    Used only when Apify fails, to keep the demo running on real data.
+    Returns None on any error so the caller can fall through to synthetic.
+    """
+    interval_map = {"1m": "1m", "5m": "5m", "15m": "15m", "1h": "1h", "4h": "4h", "1d": "1d"}
+    interval = interval_map.get(timeframe, "5m")
+    symbol = f"{asset.upper()}USDT"
+    url = "https://api.binance.com/api/v3/klines"
+    params = {"symbol": symbol, "interval": interval, "limit": min(n, 1000)}
+    try:
+        resp = httpx.get(url, params=params, timeout=20)
+        resp.raise_for_status()
+        raw = resp.json()
+        bars = [
+            OHLCVBar(
+                timestamp=datetime.utcfromtimestamp(row[0] / 1000),
+                open=float(row[1]), high=float(row[2]),
+                low=float(row[3]),  close=float(row[4]),
+                volume=float(row[5]),
+            )
+            for row in raw
+        ]
+        log.info("Binance public fallback: fetched %d real OHLCV bars for %s", len(bars), asset)
+        return bars
+    except Exception as exc:
+        log.warning("Binance public fallback failed: %s", exc)
+        return None
+
+
 def _synthetic_bars(asset: str, n: int = 1000) -> List[OHLCVBar]:
     """Generate plausible-looking synthetic OHLCV bars for fallback/testing."""
     log.warning("⚠️  Using SYNTHETIC price data for %s (set APIFY_TOKEN for real data)", asset)
@@ -106,7 +137,10 @@ def fetch_ohlcv(asset: str = "BTC", limit: int = 1000, timeframe: str = "5m") ->
             {"symbol": symbol, "timeframe": timeframe, "data_limit": limit},
         )
     except RuntimeError as exc:
-        log.error("Apify OHLCV actor error: %s – falling back to synthetic", exc)
+        log.error("Apify OHLCV actor error: %s – trying Binance public fallback", exc)
+        binance_bars = _binance_public_bars(asset, limit, timeframe)
+        if binance_bars:
+            return binance_bars
         return _synthetic_bars(asset, limit)
 
     bars: List[OHLCVBar] = []
