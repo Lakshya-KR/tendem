@@ -35,8 +35,8 @@ The pipeline flows as follows for each asset (BTC, ETH):
 ### 2. Setup
 ```bash
 # Clone the repository
-git clone https://github.com/tolokaexpert-tech/crowdwisdom.git
-cd crowdwisdom
+git clone https://github.com/Lakshya-KR/tendem.git
+cd tendem
 
 # Create and activate virtual environment
 python -m venv venv
