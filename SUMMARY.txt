@@ -171,8 +171,8 @@
 
   - Repository        github.com/Lakshya-KR/tendem
   - SUBMISSION.md     at repo root; contains APIFY token + reproduction steps
-  - crowdwisdom_v4.zip  ~42 KB, excludes .env, .kronos/, .git/, __pycache__/
-  - Demo video        pending - placeholder in SUBMISSION.md line 5
+  - crowdwisdom_v4.zip  ~47 KB, excludes .env, .kronos/, .git/, __pycache__/
+  - Demo video        https://drive.google.com/file/d/1EXyd-XT0RhY-7hVsOTe9VMfiBtA49VlS/view?usp=sharing
 
 ================================================================================
   HOW TO RUN (TL;DR - full instructions in README.md)
@@ -197,10 +197,10 @@
   OUTSTANDING ITEMS
 ================================================================================
 
-  1. Record demo video (~2-3 min) following the prepared command sequence.
-  2. Paste the video URL into SUBMISSION.md line 5.
-  3. Commit, push, and re-zip.
-  4. Submit through the internally approved channel (do not email the client
+  1. Submit through the internally approved channel (do not email the client
      directly until internal confirmation is received).
+  2. After evaluation is complete, rotate the Apify token on
+     console.apify.com so the publicly visible credential cannot be
+     reused against the account's free-tier credit.
 
 ================================================================================
