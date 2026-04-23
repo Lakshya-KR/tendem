@@ -4,7 +4,7 @@
 
   Repository : https://github.com/Lakshya-KR/tendem
   Archive    : crowdwisdom_v4.zip (~42 KB)
-  Status     : Ready for submission (video URL pending)
+  Status     : Ready for submission
 
 ================================================================================
   IMPORTANT - READ README.md BEFORE RUNNING
