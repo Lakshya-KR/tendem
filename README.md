@@ -29,8 +29,9 @@ The pipeline flows as follows for each asset (BTC, ETH):
 ## 🚦 Quick Start
 
 ### 1. Prerequisites
-- Python 3.9+
-- [Optional] GPU for real Kronos execution (otherwise fallbacks to LLM reasoning).
+- Python 3.10+ (tested on 3.11, 3.12, 3.13)
+- *Optional:* `git` on your system PATH — only needed if you want the real Hermes Agent framework (see section 2a below). The core project installs and runs without it.
+- *Optional:* GPU for the fastest real Kronos execution (CPU works too, just slower).
 
 ### 2. Setup
 ```bash
@@ -42,9 +43,28 @@ cd tendem
 python -m venv venv
 source venv/bin/activate   # Windows: .\venv\Scripts\activate
 
-# Install dependencies
+# Install dependencies (no git required — the Hermes Agent framework is optional)
 pip install -r requirements.txt
 ```
+
+### 2a. (Optional) Install the real Hermes Agent framework
+The client spec references the Hermes Agent framework from NousResearch. This project ships with a Hermes-compatible **shim** (matching interface: `AIAgent.chat()`, `reset()`, `quiet_mode`, `ephemeral_system_prompt`) so `pip install -r requirements.txt` succeeds on any fresh environment without a `git` prerequisite.
+
+`app/core/hermes_agent.py` performs a runtime `try/except` import of the real package. If installed, it is used directly; if not, the shim is used transparently.
+
+To install the real Hermes Agent (requires `git` on PATH):
+
+```bash
+pip install git+https://github.com/NousResearch/hermes-agent.git
+```
+
+After installation, restart the pipeline and watch for this log line on startup:
+
+```
+Hermes Agent framework detected - using real nousresearch/hermes-agent.AIAgent
+```
+
+If the line instead reads `Hermes Agent not available (...) - using compatible shim`, the `try/except` caught a real runtime error — examine the bracketed reason in the log to diagnose (a known one is `ModuleNotFoundError: No module named 'agent.transports'`).
 
 ### 3. Configuration
 Copy `.env.example` to `.env` and fill in your keys:

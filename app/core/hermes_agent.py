@@ -16,11 +16,24 @@ from app.core.logger import get_logger
 
 log = get_logger(__name__)
 
-# Try to use the real Hermes Agent if available
-# NOTE: Currently disabled due to 'agent.transports' dependency issue
-# The fallback shim is fully functional and respects .env configuration
+# Auto-detect the real Hermes Agent framework. If the package is installed
+# AND imports cleanly, we re-export its AIAgent so every downstream agent
+# uses it directly. If import fails for any reason (package not installed,
+# or a transitive import error like the known "agent.transports" issue),
+# we log the reason and transparently fall back to the compatible shim
+# defined below. Behaviour is therefore identical from the caller's POV.
 _HermesAIAgent = None
 HermesAvailable = False
+try:
+    from run_agent import AIAgent as _HermesAIAgent  # type: ignore  # noqa: F401
+    HermesAvailable = True
+    log.info("Hermes Agent framework detected - using real nousresearch/hermes-agent.AIAgent")
+except Exception as _hermes_err:  # ImportError OR runtime import-time errors
+    log.info(
+        "Hermes Agent not available (%s: %s) - using compatible shim. "
+        "Install with: pip install git+https://github.com/NousResearch/hermes-agent.git",
+        type(_hermes_err).__name__, str(_hermes_err)[:120],
+    )
 
 
 if HermesAvailable:

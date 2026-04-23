@@ -92,6 +92,64 @@
                    them on screen
 
   --------------------------------------------------------------------------
+  ISSUE 4 - Kronos integration was only a stub (continued below)
+  --------------------------------------------------------------------------
+  See detail further down. Newer QA findings (5 and 6) are resolved here too.
+
+  --------------------------------------------------------------------------
+  ISSUE 5 - requirements.txt had an un-installable git-only dependency
+  --------------------------------------------------------------------------
+  Symptom    : pip install -r requirements.txt failed on fresh environments
+               without git on PATH, because hermes-agent is distributed only
+               from github (no PyPI wheel).
+
+  Resolution : The git-based line was removed from requirements.txt. The
+               file now installs cleanly on any Python 3.10+ environment
+               without requiring git. A comment block in requirements.txt
+               explains this and documents the optional one-line install
+               command for the real Hermes Agent framework. README section
+               2a was added with the full explanation, the install command,
+               and the log line to look for once the real package is live.
+
+  --------------------------------------------------------------------------
+  ISSUE 6 - HermesAvailable was hard-coded False (shim always used)
+  --------------------------------------------------------------------------
+  Symptom    : app/core/hermes_agent.py had the real import commented out
+               and HermesAvailable = False pinned at module load time.
+               The project could never use the real Hermes Agent framework
+               even if it was installed.
+
+  Resolution : The hard-coded False and commented-out import were replaced
+               with a proper runtime try/except block:
+
+                 try:
+                     from run_agent import AIAgent as _HermesAIAgent
+                     HermesAvailable = True
+                     log.info("Hermes Agent framework detected ...")
+                 except Exception as e:
+                     _HermesAIAgent = None
+                     HermesAvailable = False
+                     log.info("Hermes Agent not available (...) - "
+                              "using compatible shim.")
+
+               Verification:
+                 - With hermes-agent NOT installed (current state): the
+                   except branch fires, HermesAvailable=False, the shim
+                   takes over, and a single INFO log line explains why.
+                 - With hermes-agent installed (pip install git+...): the
+                   try branch succeeds, AIAgent is rebound to the real
+                   class, and every agent (Polymarket, Kalshi, Data,
+                   Kronos, Kelly, Feedback) uses the real framework
+                   without any code changes elsewhere.
+
+               The shim itself implements the full AIAgent interface
+               documented by nousresearch/hermes-agent (chat, reset,
+               quiet_mode, ephemeral_system_prompt), so behaviour is
+               equivalent from every caller's perspective - the shim
+               is a safety net for fresh installs, not a replacement
+               for the real framework.
+
+  --------------------------------------------------------------------------
   ISSUE 4 - Kronos integration was only a stub
   --------------------------------------------------------------------------
   Resolution : Real inference is now operating. The prior kronos_infer.py

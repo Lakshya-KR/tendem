@@ -17,7 +17,14 @@ fastapi>=0.110
 uvicorn>=0.29
 
 # ─── Agent framework ─────────────────────────────────────────────────────────
-hermes-agent @ git+https://github.com/NousResearch/hermes-agent.git
+# The Hermes Agent framework from NousResearch is optional at install time.
+# app/core/hermes_agent.py auto-detects it: if the package is importable it
+# is used directly; otherwise a Hermes-compatible shim (same AIAgent
+# interface: chat/reset/quiet_mode/ephemeral_system_prompt) is used so the
+# project is runnable on fresh environments without requiring git.
+#
+# To enable the real Hermes integration (requires `git` on the system PATH):
+#     pip install git+https://github.com/NousResearch/hermes-agent.git
 
 # ─── Testing ─────────────────────────────────────────────────────────────────
 pytest>=8.3
