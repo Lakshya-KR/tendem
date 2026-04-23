@@ -30,10 +30,8 @@ The pipeline flows as follows for each asset (BTC, ETH):
 
 ### 1. Prerequisites
 - Python 3.10+ (tested on 3.11, 3.12, 3.13)
-- **`git` on your system PATH** — `requirements.txt` installs the Hermes Agent framework from its GitHub repository (there is no PyPI wheel), so pip shells out to git during resolution. Install from [git-scm.com](https://git-scm.com/downloads) if missing.
+- *Optional:* `git` on your system PATH — only needed if you want to install the real Hermes Agent framework (see section 2a below). The core `requirements.txt` installs without git.
 - *Optional:* GPU for the fastest real Kronos execution (CPU works too, just slower).
-
-> If your environment genuinely cannot provide `git` and you still want a working pipeline, comment out the `hermes-agent` line in `requirements.txt` and run `pip install -r requirements.txt`. The code's runtime try/except will catch the missing import and engage the bundled shim automatically (same `AIAgent` interface, no code changes needed).
 
 ### 2. Setup
 ```bash
@@ -45,14 +43,18 @@ cd tendem
 python -m venv venv
 source venv/bin/activate   # Windows: .\venv\Scripts\activate
 
-# Install dependencies (no git required — the Hermes Agent framework is optional)
+# Install core dependencies (works on any environment — no git required)
 pip install -r requirements.txt
 ```
 
 ### 2a. Hermes Agent framework — how it's integrated
-The client spec requires the Hermes Agent framework from NousResearch. Integration is handled at two layers:
+The client spec requires the Hermes Agent framework from NousResearch. Integration is handled at two layers, with a deliberate split between the core install and the Hermes install so that a missing `git` binary never breaks the primary `pip install -r requirements.txt`.
 
-1. **Install** — `requirements.txt` declares `hermes-agent` as a git-URL dependency, so `pip install -r requirements.txt` fetches and installs the real framework. `git` must be on PATH (see section 1).
+1. **Install** — the Hermes Agent line lives in a dedicated `requirements-hermes.txt` rather than the main `requirements.txt`. To add the real framework to an existing install:
+   ```bash
+   pip install -r requirements-hermes.txt
+   ```
+   `git` must be on PATH for this step (pip shells out to git to resolve the URL). If you skip this step, the pipeline still runs end-to-end using the bundled shim.
 
 2. **Runtime binding** — `app/core/hermes_agent.py` performs a `try/except` import of `run_agent.AIAgent`. If the package loaded cleanly, its class is bound to the `AIAgent` symbol at module level, and every downstream agent (`PolymarketAgent`, `KalshiAgent`, `DataAgent`, `KronosAgent`, `KellyAgent`, `FeedbackAgent`) inherits from the real Hermes class. If the import raises *for any reason* (the framework has a known runtime error `ModuleNotFoundError: No module named 'agent.transports'` in some setups), a Hermes-compatible shim with the same interface (`chat()`, `reset()`, `quiet_mode`, `ephemeral_system_prompt`) is bound instead, keeping the pipeline operational while a single INFO log line explains why.
 
@@ -108,6 +110,8 @@ Set `KRONOS=off` to skip the subprocess entirely and always use the LLM proxy pa
 **Run once (CLI):**
 ```bash
 python main.py --asset BTC
+# equivalent, if you prefer module-style invocation:
+python -m app.main --asset BTC
 ```
 
 **Run in continuous loop (every 5 mins):**

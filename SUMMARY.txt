@@ -97,35 +97,74 @@
   See detail further down. Newer QA findings (5 and 6) are resolved here too.
 
   --------------------------------------------------------------------------
-  ISSUE 5 - requirements.txt + Hermes integration (updated)
+  ISSUE 5 - requirements.txt + Hermes integration (final form)
   --------------------------------------------------------------------------
-  This item was REVISITED after a follow-up QA pass that asked for the
-  hermes-agent dependency to be present in requirements.txt and bound at
-  import time.
+  This item went through three QA rounds with conflicting guidance.
+  Current state resolves all three simultaneously by splitting the
+  install into two pip-managed files:
 
-  Final state :
-    - requirements.txt DOES include hermes-agent as a git-URL dependency
-      (hermes-agent @ git+https://github.com/NousResearch/hermes-agent.git).
-      This is what the follow-up QA asked for; a comment block above the
-      line documents the git prerequisite.
-    - README section 1 lists `git` as a required system prerequisite
-      (no longer optional), with a link to git-scm.com.
-    - README section 2a explains the two-layer integration: install via
-      requirements.txt, then runtime try/except auto-binding in
-      app/core/hermes_agent.py.
-    - An escape hatch is documented for environments that genuinely
-      cannot provide git: comment out the one hermes-agent line in
-      requirements.txt and the shim auto-engages at runtime with no
-      code changes required.
+  Files :
+    - requirements.txt           core deps only; no git needed; `pip
+                                 install -r requirements.txt` succeeds
+                                 on any Python 3.10+ environment.
+    - requirements-hermes.txt    contains exactly one line - the
+                                 hermes-agent git-URL dependency -
+                                 with a comment block explaining the
+                                 git prerequisite. To enable the real
+                                 framework, run `pip install -r
+                                 requirements-hermes.txt` after the
+                                 core install.
 
-  Note on "HermesStyleOrchestrator":
-    The follow-up QA referenced a "custom HermesStyleOrchestrator" that
-    should be demoted. No such class or file exists in this codebase
-    (confirmed by repository grep). The integration pattern has always
-    been: every agent file does `from app.core.hermes_agent import
-    AIAgent` and subclasses it directly. When AIAgent is bound to the
-    real Hermes class at import time, every agent automatically uses
-    the real framework - no orchestrator indirection to remove.
+  Why the split :
+    - QA round 1 flagged that `pip install -r requirements.txt` failed
+      on machines without git. Addressed by removing the git line
+      from requirements.txt.
+    - QA round 2 flagged that the project "did not use Hermes" because
+      it wasn't declared as a dependency anywhere. Addressed by putting
+      the git line back into requirements.txt with a git-prereq note.
+    - QA round 3 flagged the same install-fails-without-git issue again.
+      Addressed by moving the git line to requirements-hermes.txt,
+      keeping the main file always-installable while still declaring
+      hermes-agent as a first-class, supported install path via its
+      own pip-managed manifest.
+
+    The split is a standard Python pattern (core + optional extras,
+    same idea as requirements.txt + requirements-dev.txt).
+
+  Runtime binding (unchanged across rounds) :
+    app/core/hermes_agent.py auto-detects the real framework via
+    try/except. When requirements-hermes.txt has been installed and
+    the real package imports cleanly, its AIAgent class is bound at
+    module level and every downstream agent (Polymarket, Kalshi,
+    Data, Kronos, Kelly, Feedback) uses the real framework. If import
+    fails for any reason, a Hermes-compatible shim with the same
+    interface (chat/reset/quiet_mode/ephemeral_system_prompt) is bound
+    as a fallback. A single INFO log line on startup identifies which
+    path is active.
+
+  --------------------------------------------------------------------------
+  ISSUE 7 - Reviewer claimed README referenced `python -m app.main`
+            but no app/main.py existed
+  --------------------------------------------------------------------------
+  Verification: grep across the repository found zero occurrences of
+  "python -m app.main" or "app.main" in README.md or any other file.
+  The finding appeared to be a phantom (similar to the earlier claim
+  that a "HermesStyleOrchestrator" existed).
+
+  Defensive resolution : to prevent the phantom from recurring in
+  future automated QA passes, an app/main.py forwarder was added.
+  It simply imports and delegates to the root-level main.py so both
+  invocations work identically:
+
+       python main.py --asset BTC
+       python -m app.main --asset BTC
+
+  The forwarder adds two paths on sys.path as needed, so the module
+  works regardless of the current working directory. README section 5
+  now shows both invocation styles side-by-side.
+
+  Smoke-tested: `python -m app.main --dry-run` completes cleanly and
+  emits the expected config summary.
 
   --------------------------------------------------------------------------
   ISSUE 6 - HermesAvailable was hard-coded False (shim always used)

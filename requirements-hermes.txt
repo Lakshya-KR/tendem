@@ -1,0 +1,16 @@
+# Optional: the real Hermes Agent framework from NousResearch.
+#
+# PREREQUISITE: `git` must be on your system PATH — pip resolves this URL by
+# shelling out to git. If you do not have git installed, this file will fail.
+# Skip it; the shim in app/core/hermes_agent.py will cover the same interface.
+#
+# Usage:
+#     pip install -r requirements-hermes.txt
+#
+# After installation, restart the pipeline. The first log line from
+# app.core.hermes_agent will read:
+#     "Hermes Agent framework detected - using real nousresearch/hermes-agent.AIAgent"
+# confirming every downstream agent (Polymarket, Kalshi, Data, Kronos, Kelly,
+# Feedback) is now using the real framework instead of the shim.
+
+hermes-agent @ git+https://github.com/NousResearch/hermes-agent.git

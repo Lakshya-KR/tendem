@@ -16,20 +16,23 @@ apify-client>=1.8.1
 fastapi>=0.110
 uvicorn>=0.29
 
-# ─── Agent framework ─────────────────────────────────────────────────────────
-# Hermes Agent framework from NousResearch (github-only; no PyPI wheel).
-# PREREQUISITE: `git` must be available on the system PATH for pip to
-# resolve this URL. README section 1 documents the prereq.
-#
-# app/core/hermes_agent.py performs a runtime try/except import. When the
-# package installs cleanly, its AIAgent class is bound and every downstream
-# agent (Polymarket, Kalshi, Data, Kronos, Kelly, Feedback) uses the real
-# framework. If the import raises (e.g. the known `agent.transports`
-# runtime error), a Hermes-compatible shim with the same AIAgent interface
-# (chat/reset/quiet_mode/ephemeral_system_prompt) is bound as a fallback
-# so the pipeline remains operational.
-hermes-agent @ git+https://github.com/NousResearch/hermes-agent.git
-
 # ─── Testing ─────────────────────────────────────────────────────────────────
 pytest>=8.3
 pytest-mock>=3.14
+
+# ─── NOTE on the Hermes Agent framework ──────────────────────────────────────
+# The Hermes Agent framework (nousresearch/hermes-agent) is intentionally NOT
+# listed in this file. It is github-only (no PyPI wheel), so declaring it as
+# a dependency here would cause `pip install -r requirements.txt` to fail
+# with an opaque error on machines without git. Keeping requirements.txt
+# fully pip-compatible is a hard requirement for fresh-environment installs.
+#
+# To install the real Hermes Agent framework (git MUST be on PATH):
+#     pip install -r requirements-hermes.txt
+#
+# app/core/hermes_agent.py auto-detects the real framework at runtime via a
+# try/except import. If the package is importable, its AIAgent class is
+# bound at module level and every downstream agent uses it directly. If not,
+# a Hermes-compatible shim with the same AIAgent interface is used so the
+# pipeline remains operational - a single INFO log line explains which
+# path is active.
