@@ -10,7 +10,11 @@ requests>=2.32
 # ─── Data ─────────────────────────────────────────────────────────────────────
 pandas>=2.2
 numpy>=2.0
-apify-client>=1.8.1
+# Note: the apify-client SDK is intentionally NOT listed here. The project
+# uses httpx directly against Apify's REST API in app/services/apify_service.py
+# (plus a Binance public-API fallback). Not depending on the SDK avoids a
+# known compat bug between pinned apify-client / apify-shared versions
+# (ImportError: cannot import name 'ignore_docs' from 'apify_shared.utils').
 
 # ─── API server ───────────────────────────────────────────────────────────────
 fastapi>=0.110

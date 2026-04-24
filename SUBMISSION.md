@@ -1,9 +1,10 @@
 # Submission — CrowdWisdomTrading Predictions Agent
 
 - **Repository URL:** https://github.com/Lakshya-KR/tendem
-- **APIFY token used (for evaluation):**
-  `apify_api_jbsoxlteFRfDTu4WdcmtWpLroiwT3Q3sIjME`
-  Base URL: `https://api.apify.com/v2` (standard Apify endpoint)
+- **APIFY token used (for evaluation):** `apify_api_34ntdb87U3rUYiJCJPhQEehCjmdtNE0mJP8K`
+  - Type: personal free-tier token (not a platform/proxy credential)
+  - Base URL: `https://api.apify.com/v2` (standard Apify endpoint)
+  - Note: this token will be rotated after the evaluation window closes. If it returns HTTP 403 (quota exhausted) during review, the pipeline's automatic Binance public-API fallback keeps the demo operational with real OHLCV data.
 - **Demo video:** https://drive.google.com/file/d/1EXyd-XT0RhY-7hVsOTe9VMfiBtA49VlS/view?usp=sharing
 
 ## What's included
